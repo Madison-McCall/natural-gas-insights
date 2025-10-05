@@ -5,10 +5,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Azure Login (optional for context)
+      - name: Azure Login with SP
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get access token for Azure SQL
+        id: token
+        run: |
+          TOKEN=$(az account get-access-token \
+            --resource https://database.windows.net/ \
+            --query accessToken -o tsv)
+          if [ -z "$TOKEN" ]; then echo "No token"; exit 1; fi
+          echo "TOKEN=$TOKEN" >> $GITHUB_OUTPUT
 
       - name: Install sqlpackage
         run: |
@@ -18,12 +27,9 @@ jobs:
           sudo chmod +x sqlpackage/sqlpackage
           echo "$GITHUB_WORKSPACE/sqlpackage" >> $GITHUB_PATH
 
-      - name: Test connection using Entra Service Principal
+      - name: Try connecting with token (DriftReport = no changes)
         run: |
           sqlpackage /Action:DriftReport \
             /TargetServerName:"server-ng.database.windows.net" \
             /TargetDatabaseName:"DB_NG" \
-            /TargetUser:"${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}" \
-            /TargetPassword:"${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}" \
-            /TenantId:"${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}" \
-            /AuthenticationType:"ActiveDirectoryServicePrincipal"
+            /AccessToken:"${{ steps.token.outputs.TOKEN }}"
