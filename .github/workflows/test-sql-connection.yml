@@ -1,31 +1,29 @@
-name: Test SQL Connection
-
-on:
-  workflow_dispatch:
+name: Test AZURE_SQL_CONNECTION_STRING
+on: workflow_dispatch
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Install PowerShell SqlServer module
+      - name: Install PowerShell SQL module
         shell: pwsh
         run: |
           Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
           Install-Module SqlServer -Force -Scope CurrentUser
           Import-Module SqlServer
 
-      - name: Test connection string
+      - name: Try connecting with secret
         shell: pwsh
         env:
           CONN: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
         run: |
+          Write-Host "Testing connection..."
           try {
-            Write-Host "Attempting to connect using the connection string..."
-            $result = Invoke-Sqlcmd -ConnectionString "$env:CONN" -Query "SELECT DB_NAME() AS DbName, @@VERSION AS SqlVersion;"
-            Write-Host "✅ Connected successfully!"
-            $result | Format-Table -AutoSize
+            $r = Invoke-Sqlcmd -ConnectionString "$env:CONN" -Query "SELECT DB_NAME() AS DbName, SUSER_SNAME() AS WhoAmI;"
+            Write-Host "✅ Success!"
+            $r | Format-Table -AutoSize
           } catch {
             Write-Error "❌ Connection failed:"
-            Write-Error $_
+            Write-Error $_.Exception.Message
             exit 1
           }
