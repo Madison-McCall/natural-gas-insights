@@ -16,7 +16,6 @@ jobs:
           TOKEN=$(az account get-access-token \
             --resource https://database.windows.net/ \
             --query accessToken -o tsv)
-          if [ -z "$TOKEN" ]; then echo "No token"; exit 1; fi
           echo "TOKEN=$TOKEN" >> $GITHUB_OUTPUT
 
       - name: Install sqlpackage
@@ -27,9 +26,16 @@ jobs:
           sudo chmod +x sqlpackage/sqlpackage
           echo "$GITHUB_WORKSPACE/sqlpackage" >> $GITHUB_PATH
 
-      - name: Try connecting with token (DriftReport = no changes)
+      - name: Run DriftReport (no changes)
         run: |
           sqlpackage /Action:DriftReport \
             /TargetServerName:"server-ng.database.windows.net" \
             /TargetDatabaseName:"DB_NG" \
-            /AccessToken:"${{ steps.token.outputs.TOKEN }}"
+            /AccessToken:"${{ steps.token.outputs.TOKEN }}" \
+            /OutputPath:"./drift.json"
+
+      - name: Upload drift report
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-report
+          path: ./drift.json
