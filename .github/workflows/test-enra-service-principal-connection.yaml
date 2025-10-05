@@ -1,0 +1,29 @@
+name: Test Entra (Service Principal) Connection
+on: workflow_dispatch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install sqlpackage
+        run: |
+          sudo apt-get update && sudo apt-get install -y unzip
+          wget -q https://aka.ms/sqlpackage-linux
+          unzip -q sqlpackage-linux -d sqlpackage
+          sudo chmod +x sqlpackage/sqlpackage
+          echo "$GITHUB_WORKSPACE/sqlpackage" >> $GITHUB_PATH
+
+      - name: Try connecting with Service Principal
+        run: |
+          sqlpackage /Action:DriftReport \
+            /TargetServerName:"server-ng.database.windows.net" \
+            /TargetDatabaseName:"DB_NG" \
+            /Authentication:"ActiveDirectoryServicePrincipal" \
+            /Tenant:"${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}" \
+            /ClientId:"${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}" \
+            /ClientSecret:"${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}"
