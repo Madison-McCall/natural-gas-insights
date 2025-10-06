@@ -28,7 +28,7 @@
          uses: azure/sql-action@v2.3
          with:
            connection-string: ${{ secrets.AZURE_CONN_STRING }}
-           path: './DB_PROJ/DB_NG.sqlproj'
+           path: './DB_PROJ/DB_PROJ.sqlproj'
            action: 'publish'
            build-arguments: '-c Release'
            arguments: '/p:DropObjectsNotInSource=true'  # Optional: Customize as needed
